@@ -1,0 +1,67 @@
+# Backend Requirements for Multi-Agent Interview Analyzer
+# =========================================================
+# Updated: February 2026
+# Python Version: >=3.9 (FastAPI and recent packages dropped Python 3.8 support)
+
+# Core Framework
+fastapi>=0.128.0  # Latest: 0.128.7 (Feb 2026)
+uvicorn[standard]>=0.40.0  # Latest: 0.40.0 (Dec 2025)
+python-multipart>=0.0.9
+pydantic>=2.12.0  # Latest: 2.12.5 (Nov 2025), dropped v1 support
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0  # For loading .env files
+
+# LangChain & LangGraph - Updated to 1.0+ versions
+# BREAKING CHANGE: LangChain and LangGraph both reached 1.0 in Oct 2025
+# See migration guide: https://blog.langchain.com/langchain-langgraph-1dot0/
+langchain>=1.2.10  # Latest: 1.2.10 (Feb 2026)
+langchain-core>=1.2.11  # Latest: 1.2.11 (Feb 2026)
+langchain-openai>=1.1.9  # Latest: 1.1.9 (PyPI Feb 2026)
+langgraph>=1.0.8  # Latest: 1.0.8 (Feb 2026) - Production-ready with breaking changes from 0.x
+
+# Audio Processing - use versions with pre-built wheels
+faster-whisper>=1.0.0
+librosa>=0.10.0
+soundfile>=0.12.0
+# Note: pyaudioanalysis optional, may need C++ compiler
+# pyaudioanalysis>=0.3.0
+
+# Video & Computer Vision
+opencv-python>=4.10.0  # Active development, latest stable versions available
+mediapipe>=0.10.30  # Pose and face mesh detection (supports both legacy and new API)
+
+# Scientific Computing - flexible to use pre-built wheels
+numpy>=1.24.0,<2.0  # Compatible with most packages
+scipy>=1.11.0
+
+# HTTP & Async
+httpx>=0.27.0
+aiofiles>=23.0.0
+
+# Logging
+loguru>=0.7.0
+
+# Testing (optional)
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+
+# Development
+black>=24.0.0
+flake8>=7.0.0
+mypy>=1.8.0
+
+# Migration Notes:
+# ================
+# 1. LangChain/LangGraph 1.0 Migration:
+#    - LangGraph 1.0 introduces breaking changes from 0.x
+#    - New features: durable state, human-in-the-loop, streaming
+#    - Legacy code moved to langchain-classic package
+#    - Review: https://docs.langchain.com/oss/python/releases/changelog
+#
+# 2. FastAPI changes:
+#    - Dropped Pydantic v1 support (use Pydantic >=2.7.0)
+#    - Requires Python >=3.9
+#
+# 3. Python Version:
+#    - Minimum Python 3.9 required (FastAPI, modern dependencies)
+#    - Python 3.8 support dropped across ecosystem

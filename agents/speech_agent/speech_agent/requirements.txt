@@ -1,5 +1,0 @@
-faster-whisper==1.0.1
-langgraph==0.0.74
-langchain-core>=0.1.0
-soundfile==0.12.1
-librosa==0.10.0
