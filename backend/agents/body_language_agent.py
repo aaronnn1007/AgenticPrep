@@ -22,7 +22,7 @@ import numpy as np
 import mediapipe as mp
 from pydantic import BaseModel, Field
 
-from backend.models.state import BodyLanguageModel
+from backend.models.state import BodyLanguageModel, InterviewState
 from backend.utils.video_utils import (
     validate_video_file,
     load_video_frames,
@@ -502,7 +502,7 @@ def analyze_body_language(video_file_path: str, frame_sample_rate: int = 5) -> B
 
 
 # LangGraph node wrapper
-def body_language_node(state: "InterviewState") -> dict:
+def body_language_node(state: InterviewState) -> dict:
     """
     LangGraph node wrapper for BodyLanguageAnalyser.
 
@@ -513,8 +513,6 @@ def body_language_node(state: "InterviewState") -> dict:
     Returns:
         Dictionary with body_language field for LangGraph state merge
     """
-    from backend.models.state import InterviewState, BodyLanguageModel
-
     logger.info(
         f"BodyLanguageNode: Starting for interview_id={state.interview_id}")
 
