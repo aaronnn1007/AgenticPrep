@@ -1,0 +1,382 @@
+{
+  "test_cases": [
+    {
+      "id": "excellent_001",
+      "category": "excellent",
+      "description": "Excellent technical answer with clear communication",
+      "role": "Software Engineer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "Explain the difference between a process and a thread in operating systems.",
+        "topic": "Operating Systems",
+        "difficulty": 0.6,
+        "intent": [
+          "Memory isolation",
+          "Resource sharing",
+          "Context switching",
+          "Use cases"
+        ]
+      },
+      "transcript": "A process is an independent execution unit with its own memory space, while a thread is a lightweight execution unit within a process that shares memory with other threads. Processes provide strong isolation - if one process crashes, it doesn't affect others. This is because each process has its own address space. Threads, on the other hand, share the same address space, which makes inter-thread communication faster but requires careful synchronization. Context switching between processes is more expensive because the OS needs to switch memory mappings, while switching between threads in the same process is cheaper. In practice, we use processes when we need isolation and security, like in web browsers where each tab is a separate process. Threads are better for parallelizing work within the same application, like handling multiple client connections in a server.",
+      "expected_scores": {
+        "technical": [75, 95],
+        "communication": [75, 95],
+        "overall": [75, 95]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 145,
+        "filler_ratio": 0.02,
+        "clarity": 0.85,
+        "tone": "confident"
+      }
+    },
+    {
+      "id": "excellent_002",
+      "category": "excellent",
+      "description": "Excellent answer with practical examples",
+      "role": "Data Scientist",
+      "experience_level": "Senior",
+      "question": {
+        "text": "Explain the bias-variance tradeoff and how to address it.",
+        "topic": "Machine Learning",
+        "difficulty": 0.7,
+        "intent": [
+          "Bias definition",
+          "Variance definition",
+          "Tradeoff explanation",
+          "Practical solutions"
+        ]
+      },
+      "transcript": "The bias-variance tradeoff is fundamental to machine learning. Bias refers to errors from oversimplified models that fail to capture the underlying patterns - like using linear regression for non-linear data. High bias leads to underfitting. Variance, on the other hand, measures how sensitive the model is to training data fluctuations. High variance models overfit, performing well on training data but poorly on new data. The tradeoff occurs because reducing bias often increases variance and vice versa. To address this, I use several techniques: cross-validation helps me find the sweet spot, regularization like L1 or L2 penalizes complex models to reduce variance, ensemble methods like random forests reduce variance by averaging multiple models, and increasing training data helps reduce variance. In my last project, I used gradient boosting with early stopping to balance this tradeoff effectively.",
+      "expected_scores": {
+        "technical": [80, 95],
+        "communication": [80, 95],
+        "overall": [80, 95]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 155,
+        "filler_ratio": 0.03,
+        "clarity": 0.90,
+        "tone": "confident"
+      }
+    },
+    {
+      "id": "average_001",
+      "category": "average",
+      "description": "Average answer with some gaps",
+      "role": "Software Engineer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "What is RESTful API design and what are its principles?",
+        "topic": "Web Development",
+        "difficulty": 0.5,
+        "intent": [
+          "REST definition",
+          "Statelessness",
+          "HTTP methods",
+          "Resource-based URLs"
+        ]
+      },
+      "transcript": "REST stands for Representational State Transfer. It's a way to design APIs using HTTP. The main principles are that it should be stateless, meaning each request should contain all the information needed. We use different HTTP methods like GET for retrieving data, POST for creating, PUT for updating, and DELETE for removing resources. URLs should represent resources, like /users/123 instead of /getUser. REST APIs return data usually in JSON format. It's widely used because it's simple and works well with HTTP.",
+      "expected_scores": {
+        "technical": [55, 75],
+        "communication": [60, 75],
+        "overall": [55, 75]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 130,
+        "filler_ratio": 0.08,
+        "clarity": 0.70,
+        "tone": "neutral"
+      }
+    },
+    {
+      "id": "average_002",
+      "category": "average",
+      "description": "Average answer with basic understanding",
+      "role": "Backend Developer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "Explain database indexing and when to use it.",
+        "topic": "Databases",
+        "difficulty": 0.6,
+        "intent": [
+          "Index definition",
+          "Performance benefits",
+          "Tradeoffs",
+          "Use cases"
+        ]
+      },
+      "transcript": "Database indexing is like an index in a book. It helps the database find data faster without scanning the entire table. You create an index on columns that you frequently search or filter by. For example, if you often search users by email, you'd create an index on the email column. The benefit is that queries become much faster, especially on large tables. However, indexes take up space and slow down writes because the database needs to update the index whenever data changes. So you need to balance read performance with write performance.",
+      "expected_scores": {
+        "technical": [50, 70],
+        "communication": [55, 70],
+        "overall": [50, 70]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 125,
+        "filler_ratio": 0.10,
+        "clarity": 0.65,
+        "tone": "neutral"
+      }
+    },
+    {
+      "id": "poor_001",
+      "category": "poor",
+      "description": "Poor answer with superficial understanding",
+      "role": "Software Engineer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "Explain the SOLID principles in object-oriented programming.",
+        "topic": "Software Design",
+        "difficulty": 0.6,
+        "intent": [
+          "Single Responsibility",
+          "Open/Closed",
+          "Liskov Substitution",
+          "Interface Segregation",
+          "Dependency Inversion"
+        ]
+      },
+      "transcript": "SOLID is like, um, some principles for programming. I think the S stands for single something, like each class should do one thing. And there's open and closed, which means, uh, you should be able to extend code without changing it, I think. The rest I'm not too sure about. These principles help make code better and more maintainable.",
+      "expected_scores": {
+        "technical": [25, 45],
+        "communication": [30, 50],
+        "overall": [25, 45]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 110,
+        "filler_ratio": 0.18,
+        "clarity": 0.50,
+        "tone": "uncertain"
+      }
+    },
+    {
+      "id": "poor_002",
+      "category": "poor",
+      "description": "Poor answer with significant knowledge gaps",
+      "role": "Data Scientist",
+      "experience_level": "Mid",
+      "question": {
+        "text": "What is cross-validation and why is it important?",
+        "topic": "Machine Learning",
+        "difficulty": 0.5,
+        "intent": [
+          "Cross-validation definition",
+          "Purpose",
+          "Types (k-fold, etc.)",
+          "Benefits"
+        ]
+      },
+      "transcript": "Cross-validation is when you, um, validate your data. I think it involves splitting the data into different parts and testing on them. It's important for, like, making sure your model works on different data. I believe you do it to avoid overfitting or something like that.",
+      "expected_scores": {
+        "technical": [20, 40],
+        "communication": [25, 45],
+        "overall": [20, 40]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 105,
+        "filler_ratio": 0.20,
+        "clarity": 0.45,
+        "tone": "uncertain"
+      }
+    },
+    {
+      "id": "irrelevant_001",
+      "category": "irrelevant",
+      "description": "Completely irrelevant answer",
+      "role": "Software Engineer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "Explain how garbage collection works in Java.",
+        "topic": "Java",
+        "difficulty": 0.6,
+        "intent": [
+          "Memory management",
+          "Heap structure",
+          "GC algorithms",
+          "Performance implications"
+        ]
+      },
+      "transcript": "I really enjoy programming and I've been working on some personal projects lately. Java is a good language because it's widely used in enterprise environments. In my last job, we used microservices architecture and deployed on Kubernetes. I think cloud technologies are becoming very important nowadays.",
+      "expected_scores": {
+        "technical": [5, 25],
+        "communication": [10, 30],
+        "overall": [5, 25]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 140,
+        "filler_ratio": 0.05,
+        "clarity": 0.75,
+        "tone": "neutral"
+      }
+    },
+    {
+      "id": "nervous_good_001",
+      "category": "good_nervous",
+      "description": "Good technical answer but nervous delivery",
+      "role": "Software Engineer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "What is Docker and how does containerization work?",
+        "topic": "DevOps",
+        "difficulty": 0.5,
+        "intent": [
+          "Containerization concept",
+          "Docker basics",
+          "Benefits",
+          "Use cases"
+        ]
+      },
+      "transcript": "Um, okay, so Docker is, like, a containerization platform. It, uh, packages applications with all their dependencies into containers. These containers are, you know, lightweight and portable. Unlike virtual machines, um, containers share the host OS kernel, which makes them more efficient. You basically create a Dockerfile that, like, specifies the environment and dependencies, and then Docker builds an image from it. You can run multiple containers, uh, from the same image. This is really useful for, um, ensuring consistency across development, testing, and production environments. You know, it solves the 'it works on my machine' problem.",
+      "expected_scores": {
+        "technical": [65, 85],
+        "communication": [40, 60],
+        "overall": [50, 70]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 95,
+        "filler_ratio": 0.25,
+        "clarity": 0.55,
+        "tone": "hesitant"
+      }
+    },
+    {
+      "id": "confident_poor_001",
+      "category": "poor_confident",
+      "description": "Poor technical answer but confident delivery",
+      "role": "Backend Developer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "Explain the CAP theorem and its implications for distributed systems.",
+        "topic": "Distributed Systems",
+        "difficulty": 0.7,
+        "intent": [
+          "Consistency definition",
+          "Availability definition",
+          "Partition tolerance",
+          "Tradeoffs"
+        ]
+      },
+      "transcript": "The CAP theorem is about database optimization. It states that you can have consistency, availability, and performance, but you can only choose two. Most databases choose consistency and availability because performance can be improved with caching. This theorem helps you decide which database technology to use for your application. For example, SQL databases prioritize consistency while NoSQL databases prioritize availability and performance.",
+      "expected_scores": {
+        "technical": [15, 35],
+        "communication": [55, 70],
+        "overall": [30, 50]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 160,
+        "filler_ratio": 0.02,
+        "clarity": 0.88,
+        "tone": "confident"
+      }
+    },
+    {
+      "id": "excellent_junior_001",
+      "category": "excellent_junior",
+      "description": "Excellent answer from a junior candidate",
+      "role": "Software Engineer",
+      "experience_level": "Fresher",
+      "question": {
+        "text": "What is the difference between == and === in JavaScript?",
+        "topic": "JavaScript",
+        "difficulty": 0.3,
+        "intent": [
+          "Type coercion",
+          "Strict equality",
+          "Examples",
+          "Best practices"
+        ]
+      },
+      "transcript": "In JavaScript, the double equals operator performs type coercion before comparison, while triple equals checks both value and type without coercion. For example, 5 == '5' returns true because JavaScript converts the string to a number, but 5 === '5' returns false because one is a number and the other is a string. Type coercion can lead to unexpected behavior, like 0 == false being true. It's generally considered best practice to use triple equals for comparisons to avoid bugs caused by implicit type conversion. I always use === unless I have a specific reason to allow type coercion.",
+      "expected_scores": {
+        "technical": [75, 90],
+        "communication": [70, 90],
+        "overall": [70, 90]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 135,
+        "filler_ratio": 0.04,
+        "clarity": 0.78,
+        "tone": "neutral"
+      }
+    },
+    {
+      "id": "average_senior_001",
+      "category": "average_senior",
+      "description": "Average answer from a senior candidate (should score lower than expected)",
+      "role": "Software Engineer",
+      "experience_level": "Senior",
+      "question": {
+        "text": "Design a rate limiting system for a high-traffic API.",
+        "topic": "System Design",
+        "difficulty": 0.85,
+        "intent": [
+          "Rate limiting algorithms",
+          "Distributed considerations",
+          "Storage solutions",
+          "Tradeoffs and edge cases"
+        ]
+      },
+      "transcript": "For rate limiting, I would use Redis to store request counts. You can set a key with the user ID and increment it for each request. If the count exceeds the limit, reject the request. Redis has TTL so you can automatically reset the counter after a time window. This approach is simple and works well for most cases.",
+      "expected_scores": {
+        "technical": [40, 60],
+        "communication": [45, 65],
+        "overall": [40, 60]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 140,
+        "filler_ratio": 0.06,
+        "clarity": 0.72,
+        "tone": "neutral"
+      }
+    },
+    {
+      "id": "rambling_001",
+      "category": "rambling",
+      "description": "Overly verbose answer that loses focus",
+      "role": "Software Engineer",
+      "experience_level": "Mid",
+      "question": {
+        "text": "What is a hash table and how does it work?",
+        "topic": "Data Structures",
+        "difficulty": 0.5,
+        "intent": [
+          "Hash function",
+          "Collision handling",
+          "Time complexity",
+          "Use cases"
+        ]
+      },
+      "transcript": "Well, hash tables are really interesting data structures. I remember learning about them in college. Basically, they use a hash function, which is like a mathematical function that takes an input and produces a number. This number is used as an index in an array. It's really fast, like O(1) on average for lookups. But you can have collisions, you know, when two keys hash to the same index. There are different ways to handle that, like chaining where you store multiple items at the same index using a linked list, or open addressing where you find another empty slot. Hash tables are used everywhere - in dictionaries, sets, database indexes. Python dictionaries are hash tables. They're really efficient for lookups. Oh, and the hash function needs to be good, meaning it should distribute keys evenly to avoid too many collisions. A bad hash function can make performance degrade to O(n).",
+      "expected_scores": {
+        "technical": [60, 75],
+        "communication": [45, 65],
+        "overall": [50, 70]
+      },
+      "voice_characteristics": {
+        "speech_rate_wpm": 170,
+        "filler_ratio": 0.12,
+        "clarity": 0.68,
+        "tone": "neutral"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2026-02-16",
+    "description": "Synthetic interview test cases for calibration and benchmarking",
+    "total_cases": 12,
+    "categories": {
+      "excellent": 2,
+      "average": 2,
+      "poor": 2,
+      "irrelevant": 1,
+      "good_nervous": 1,
+      "poor_confident": 1,
+      "excellent_junior": 1,
+      "average_senior": 1,
+      "rambling": 1
+    }
+  }
+}
