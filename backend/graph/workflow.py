@@ -28,10 +28,10 @@ from backend.models.state import InterviewState
 from backend.agents.question_generation import question_generation_node
 from backend.agents.voice_agent import voice_agent_node
 from backend.agents.answer_quality import answer_quality_node
-from backend.agents.body_language import body_language_node
+from backend.agents.body_language_agent import body_language_node
 from backend.agents.confidence_inference import confidence_behavior_node
 from backend.agents.scoring_aggregation import scoring_aggregation_node
-from backend.agents.recommendation import recommendation_node
+from backend.agents.recommendation_system import recommendation_node
 
 logger = logging.getLogger(__name__)
 

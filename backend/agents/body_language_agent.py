@@ -499,3 +499,61 @@ def analyze_body_language(video_file_path: str, frame_sample_rate: int = 5) -> B
     """
     analyser = BodyLanguageAnalyser(frame_sample_rate=frame_sample_rate)
     return analyser.analyze(video_file_path)
+
+
+# LangGraph node wrapper
+def body_language_node(state: "InterviewState") -> dict:
+    """
+    LangGraph node wrapper for BodyLanguageAnalyser.
+
+    Args:
+        state: InterviewState object containing:
+            - video_path: Path to video file for analysis
+
+    Returns:
+        Dictionary with body_language field for LangGraph state merge
+    """
+    from backend.models.state import InterviewState, BodyLanguageModel
+
+    logger.info(
+        f"BodyLanguageNode: Starting for interview_id={state.interview_id}")
+
+    try:
+        # Check if video path is provided
+        if not state.video_path:
+            logger.warning(
+                "BodyLanguageNode: No video_path provided, using defaults")
+            return {
+                "body_language": BodyLanguageModel(
+                    eye_contact=0.5,
+                    posture_stability=0.5,
+                    facial_expressiveness=0.5,
+                    distractions=[]
+                )
+            }
+
+        # Initialize analyser and run analysis
+        analyser = BodyLanguageAnalyser(frame_sample_rate=5)
+        result = analyser.analyze(state.video_path)
+
+        logger.info(
+            f"BodyLanguageNode: Completed - "
+            f"eye_contact={result.eye_contact:.2f}, "
+            f"posture_stability={result.posture_stability:.2f}, "
+            f"facial_expressiveness={result.facial_expressiveness:.2f}, "
+            f"distractions={result.distractions}"
+        )
+
+        return {"body_language": result}
+
+    except Exception as e:
+        logger.error(f"BodyLanguageNode: Failed - {e}", exc_info=True)
+        # Return default values on error
+        return {
+            "body_language": BodyLanguageModel(
+                eye_contact=0.5,
+                posture_stability=0.5,
+                facial_expressiveness=0.5,
+                distractions=["analysis_error"]
+            )
+        }
