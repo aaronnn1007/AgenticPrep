@@ -587,11 +587,10 @@ def question_generation_node(state: "InterviewState") -> "InterviewState":
         logger.info(
             f"QuestionGenerationNode: Generated question on topic '{result.question.topic}'")
 
-        return updated_state
+        # Return only the key we're updating (LangGraph merges it into state)
+        return {"question": updated_state.question}
 
     except Exception as e:
         logger.error(f"QuestionGenerationNode: Failed - {e}", exc_info=True)
-        # Return state with null question
-        updated_state = state.model_copy(deep=True)
-        updated_state.question = None
-        return updated_state
+        # Return empty question on error
+        return {"question": None}

@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -57,22 +57,60 @@ function ScoreBar({
   );
 }
 
+function CircularScore({ value }: { value: number }) {
+  const pct = Math.round(value);
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+  const color =
+    pct >= 70 ? "#22c55e" : pct >= 40 ? "#eab308" : "#ef4444";
+
+  return (
+    <div className="relative flex items-center justify-center w-24 h-24">
+      <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="8"
+          className="text-muted"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth="8"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="transition-all duration-700"
+        />
+      </svg>
+      <span className="absolute text-xl font-bold">{pct}%</span>
+    </div>
+  );
+}
+
 function ResultsContent() {
+  const router = useRouter();
   const params = useSearchParams();
   const interviewId = params.get("id") ?? "";
   const { analysisResult, question, reset } = useInterviewStore();
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
+
+  // Redirect to home if no results
+  useEffect(() => {
+    if (!analysisResult) {
+      router.replace("/");
+    }
+  }, [analysisResult, router]);
 
   if (!analysisResult) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <div className="space-y-4 text-center">
-          <p className="text-muted-foreground">No results available.</p>
-          <Button variant="outline" onClick={() => (window.location.href = "/")}>
-            Start a new interview
-          </Button>
-        </div>
-      </main>
-    );
+    return null; // Will redirect
   }
 
   const { scores, recommendations, transcript } = analysisResult;
@@ -93,12 +131,7 @@ function ResultsContent() {
               Session {interviewId}
             </p>
           </div>
-          <Badge
-            variant={scores.overall >= 70 ? "default" : "secondary"}
-            className="text-lg px-3 py-1"
-          >
-            {scores.overall.toFixed(0)}%
-          </Badge>
+          <CircularScore value={scores.overall} />
         </div>
 
         {/* ── Scores ── */}
@@ -179,19 +212,29 @@ function ResultsContent() {
           </Card>
         )}
 
-        {/* ── Transcript ── */}
+        {/* ── Transcript (collapsible) ── */}
         <Card className="border-border/60">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">🗣️ Your Answer (Transcript)</CardTitle>
+          <CardHeader
+            className="pb-2 cursor-pointer select-none"
+            onClick={() => setTranscriptOpen((o) => !o)}
+          >
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">🗣️ Your Answer (Transcript)</CardTitle>
+              <span className="text-sm text-muted-foreground">
+                {transcriptOpen ? "▲ Hide" : "▼ Show"}
+              </span>
+            </div>
             <CardDescription>
               {question && `Question: ${question}`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-              {transcript || "No transcript available."}
-            </p>
-          </CardContent>
+          {transcriptOpen && (
+            <CardContent>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                {transcript || "No transcript available."}
+              </p>
+            </CardContent>
+          )}
         </Card>
 
         {/* ── Actions ── */}

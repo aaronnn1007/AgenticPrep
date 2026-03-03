@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "data/uploads"
     MAX_AUDIO_SIZE_MB: int = 50
     MAX_VIDEO_SIZE_MB: int = 200
-    ALLOWED_AUDIO_EXTENSIONS: set = {"mp3", "wav", "m4a", "ogg"}
+    ALLOWED_AUDIO_EXTENSIONS: set = {"mp3", "wav", "m4a", "ogg", "webm"}
     ALLOWED_VIDEO_EXTENSIONS: set = {"mp4", "avi", "mov", "webm"}
 
     # Database (optional - for persistence)

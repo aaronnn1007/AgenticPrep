@@ -501,6 +501,11 @@ def answer_quality_node(state: InterviewState) -> InterviewState:
         # Import here to avoid circular dependency
         from backend.models.state import InterviewState, AnswerQualityModel
 
+        logger.info(
+            f"AnswerQualityNode: Starting for interview_id={state.interview_id}")
+        logger.info(
+            f"AnswerQualityNode: Transcript length = {len(state.transcript or '')} chars")
+
         if not state.question:
             raise ValueError(
                 "Question must be generated before answer quality analysis")
@@ -531,6 +536,15 @@ def answer_quality_node(state: InterviewState) -> InterviewState:
 
         # Convert back to legacy format
         answer_quality = AnswerQualityModel(**result["answer_quality"])
+
+        logger.info(
+            f"AnswerQualityNode: Completed - "
+            f"relevance={answer_quality.relevance:.2f}, "
+            f"correctness={answer_quality.correctness:.2f}, "
+            f"depth={answer_quality.depth:.2f}, "
+            f"structure={answer_quality.structure:.2f}, "
+            f"gaps={len(answer_quality.gaps)}"
+        )
 
         # Update state
         updated_state = state.model_copy(deep=True)

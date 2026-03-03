@@ -700,10 +700,24 @@ async def test_transcription_latency_requirement(audio_worker, temp_dir, webrtc_
     logger.info(f"Average latency: {avg_latency:.3f}s")
     logger.info(f"Max latency: {max_latency:.3f}s")
 
-    # Requirement: < 2 seconds per chunk
-    # Note: Using tiny model for speed, may still exceed in CI
-    # In production, use base or small model with GPU
-    assert avg_latency < 5.0, f"Average latency {avg_latency}s exceeds threshold"
+    # Per-chunk overage warnings (informational, not a hard failure)
+    CHUNK_LATENCY_THRESHOLD_S = 2.0
+    over_threshold = [l for l in latencies if l > CHUNK_LATENCY_THRESHOLD_S]
+    if over_threshold:
+        logger.warning(
+            f"{len(over_threshold)}/{len(latencies)} chunk(s) exceeded "
+            f"{CHUNK_LATENCY_THRESHOLD_S}s threshold: "
+            + ", ".join(f"{l:.3f}s" for l in over_threshold)
+        )
+
+    # Requirement: average < 2 seconds per chunk
+    # The streaming pipeline enforces this with asyncio.wait_for() timeout;
+    # any chunk that exceeds the budget is skipped, so in normal operation
+    # avg_latency should comfortably stay below 2.0s.
+    assert avg_latency < 2.0, (
+        f"Average chunk latency {avg_latency:.3f}s exceeds 2s real-time threshold. "
+        f"Check transcription_timeout_s on AudioStreamingWorker."
+    )
 
     logger.info("✓ Transcription latency requirement PASSED")
 

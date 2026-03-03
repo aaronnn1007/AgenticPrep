@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useInterviewStore } from "@/store/interviewStore";
 import type { Role, ExperienceLevel, StartInterviewResponse } from "@/types/interview";
 import {
@@ -112,8 +113,15 @@ export default function LandingPage() {
     <main className="min-h-screen bg-background text-foreground">
       {/* ── Nav ── */}
       <nav className="border-b border-border/60 px-6 py-4">
-        <div className="mx-auto flex max-w-6xl items-center justify-between">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <Image
+              src="/globe.svg"
+              alt="AgenticPrep Logo"
+              width={24}
+              height={24}
+              className="-ml-0.5"
+            />
             <span className="text-xl font-bold tracking-tight">AgenticPrep</span>
             <Badge variant="secondary" className="text-xs">
               Beta
@@ -131,7 +139,7 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="mx-auto max-w-6xl px-6 pt-20 pb-12 text-center">
+      <section className="mx-auto max-w-6xl px-6 pt-12 pb-12 text-center">
         <Badge variant="outline" className="mb-6 gap-1.5 px-3 py-1 text-xs font-medium">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
           AI-Powered Interview Coach

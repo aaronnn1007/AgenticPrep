@@ -16,6 +16,7 @@ Usage:
 """
 
 from datetime import datetime
+from backend.exceptions import TranscriptionError
 from backend.streaming.rtp_audio_receiver import RTPAudioReceiver
 from backend.streaming.audio_worker import AudioStreamingWorker, AudioChunk
 import asyncio
@@ -272,6 +273,13 @@ class AudioDiagnostic:
             # Cleanup
             await worker.stop()
 
+        except TranscriptionError as e:
+            # Transcription failed with a known, recoverable error — not a bug
+            # in the worker itself.  Callers should implement retry logic.
+            print(f"✗ Transcription failed: {e}")
+            logger.error(
+                "Transcription error (TranscriptionError)", exc_info=True)
+            self.results['test_audio_worker'] = 'FAIL'
         except Exception as e:
             print(f"✗ Audio worker test failed: {e}")
             logger.error("Audio worker error", exc_info=True)

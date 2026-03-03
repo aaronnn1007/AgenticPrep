@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 SUPPORTED_AUDIO_FORMATS = {".wav", ".mp3",
-                           ".m4a", ".ogg", ".flac", ".aac", ".wma"}
+                           ".m4a", ".ogg", ".flac", ".aac", ".wma", ".webm"}
 DEFAULT_SAMPLE_RATE = 16000  # Whisper's native sample rate
 
 
@@ -123,6 +123,14 @@ def validate_audio_file(file_path: str) -> None:
             f"Unsupported audio format: {path.suffix}. "
             f"Supported: {', '.join(SUPPORTED_AUDIO_FORMATS)}"
         )
+
+    # webm is not supported by soundfile (libsndfile) but is handled fine by
+    # faster-whisper via ffmpeg — skip the metadata probe for that format.
+    if path.suffix.lower() == ".webm":
+        if path.stat().st_size == 0:
+            raise ValueError("Audio file is empty (0 bytes)")
+        logger.debug(f"Validated audio (webm, size={path.stat().st_size}B): {file_path}")
+        return
 
     # Try to read metadata
     try:

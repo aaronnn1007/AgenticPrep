@@ -29,6 +29,7 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 from pydantic import BaseModel, Field, validator
 
+from backend.exceptions import TranscriptionError
 from backend.models.state import InterviewState, VoiceAnalysisModel
 from backend.config import settings
 
@@ -43,7 +44,7 @@ FILLER_WORDS = {
 }
 
 # Supported audio formats
-SUPPORTED_FORMATS = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".aac"}
+SUPPORTED_FORMATS = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".aac", ".webm"}
 
 
 class VoiceAnalysisInput(BaseModel):
@@ -125,7 +126,12 @@ class VoiceAgent:
         Transcribe audio file using Whisper.
 
         Returns:
-            Full transcript as string
+            Full transcript as string (may be empty for silent audio).
+
+        Raises:
+            TranscriptionError: If the Whisper model itself throws, indicating
+                a model or I/O failure rather than silently returning "".  Callers
+                should distinguish this from an empty-but-valid silent-audio result.
         """
         logger.info(f"Transcribing audio: {audio_path}")
 
@@ -144,8 +150,12 @@ class VoiceAgent:
             return transcript.strip()
 
         except Exception as e:
-            logger.error(f"Transcription failed: {e}")
-            return ""
+            logger.error(f"Transcription failed for '{audio_path}': {e}")
+            raise TranscriptionError(
+                f"Whisper transcription failed: {e}",
+                audio_path=audio_path,
+                cause=e,
+            ) from e
 
     def _calculate_speech_rate(self, transcript: str, duration: float) -> float:
         """
@@ -326,30 +336,20 @@ class VoiceAgent:
 
         logger.info(f"Audio file validated: {audio_path}")
 
-    def analyze(self, audio_file_path: str) -> VoiceAnalysisModel:
+    def _analyze_with_transcript(
+        self, audio_file_path: str
+    ) -> tuple:
         """
-        Main analysis method - extracts objective voice metrics from audio.
-
-        This is the primary public API for the VoiceAgent.
-
-        Pipeline:
-        1. Validate audio file
-        2. Load audio and get duration
-        3. Transcribe using Whisper
-        4. Calculate speech rate (WPM)
-        5. Detect filler words
-        6. Analyze clarity
-        7. Classify tone
-
-        Args:
-            audio_file_path: Path to audio file (.wav, .mp3, etc.)
+        Internal pipeline that returns both the VoiceAnalysisModel AND the
+        transcript string in a single Whisper pass.
 
         Returns:
-            VoiceAnalysisModel with all metrics
+            (VoiceAnalysisModel, transcript_str)
 
         Raises:
             FileNotFoundError: If audio file doesn't exist
             ValueError: If audio file is invalid or unsupported format
+            TranscriptionError: If Whisper fails
         """
         logger.info(f"Starting voice analysis: {audio_file_path}")
 
@@ -362,23 +362,29 @@ class VoiceAgent:
         if duration <= 0:
             logger.warning(
                 "Audio duration is 0 or negative - returning default metrics")
-            return VoiceAnalysisModel(
-                speech_rate_wpm=0.0,
-                filler_ratio=0.0,
-                clarity=0.0,
-                tone="neutral"
+            return (
+                VoiceAnalysisModel(
+                    speech_rate_wpm=0.0,
+                    filler_ratio=0.0,
+                    clarity=0.0,
+                    tone="neutral"
+                ),
+                ""
             )
 
-        # Step 3: Transcribe
+        # Step 3: Transcribe (single Whisper call)
         transcript = self._transcribe_audio(audio_file_path)
 
         if not transcript or len(transcript.strip()) == 0:
             logger.warning("Empty transcript - audio may be silent")
-            return VoiceAnalysisModel(
-                speech_rate_wpm=0.0,
-                filler_ratio=0.0,
-                clarity=0.0,
-                tone="uncertain"
+            return (
+                VoiceAnalysisModel(
+                    speech_rate_wpm=0.0,
+                    filler_ratio=0.0,
+                    clarity=0.0,
+                    tone="uncertain"
+                ),
+                ""
             )
 
         # Step 4: Calculate speech rate
@@ -409,6 +415,35 @@ class VoiceAgent:
             f"tone={tone}"
         )
 
+        voice_analysis.is_computed = True
+        return voice_analysis, transcript
+
+    def analyze(self, audio_file_path: str) -> VoiceAnalysisModel:
+        """
+        Main analysis method - extracts objective voice metrics from audio.
+
+        This is the primary public API for the VoiceAgent.
+
+        Pipeline:
+        1. Validate audio file
+        2. Load audio and get duration
+        3. Transcribe using Whisper
+        4. Calculate speech rate (WPM)
+        5. Detect filler words
+        6. Analyze clarity
+        7. Classify tone
+
+        Args:
+            audio_file_path: Path to audio file (.wav, .mp3, etc.)
+
+        Returns:
+            VoiceAnalysisModel with all metrics
+
+        Raises:
+            FileNotFoundError: If audio file doesn't exist
+            ValueError: If audio file is invalid or unsupported format
+        """
+        voice_analysis, _ = self._analyze_with_transcript(audio_file_path)
         return voice_analysis
 
     def execute(self, state: InterviewState) -> InterviewState:
@@ -438,16 +473,23 @@ class VoiceAgent:
             FileNotFoundError: If audio file doesn't exist (file-based mode)
         """
         # Mode 0: Pre-computed metrics (WebRTC with Redis)
-        # If voice_analysis already exists with real metrics, just return state
-        if state.voice_analysis:
-            # Check if it has meaningful metrics (not all zeros/defaults)
-            va = state.voice_analysis
-            if va.speech_rate_wpm > 0 or va.clarity > 0 or va.filler_ratio > 0:
-                logger.info(
-                    f"Voice analysis already computed - using existing metrics: "
-                    f"WPM={va.speech_rate_wpm:.2f}, clarity={va.clarity:.3f}"
-                )
-                return state
+        # Skip re-analysis only when metrics were produced by real analysis.
+        # Checks:
+        #   - is_computed flag is the authoritative guard (set only after real processing)
+        #   - speech_rate_wpm > 0 is the primary fallback: it is 0 in the default
+        #     VoiceAnalysisModel and in the Mode-3 empty-transcript fallback (which
+        #     sets clarity=0.5 but speech_rate_wpm=0), so using OR with clarity
+        #     would cause those fallback states to be mistaken for real results.
+        # NOTE: state.voice_analysis is never None (default_factory always creates
+        # a VoiceAnalysisModel), so the truthiness check is intentionally skipped.
+        va = state.voice_analysis
+        if va.is_computed or va.speech_rate_wpm > 0:
+            logger.info(
+                f"Voice analysis already computed - using existing metrics: "
+                f"WPM={va.speech_rate_wpm:.2f}, clarity={va.clarity:.3f}, "
+                f"is_computed={va.is_computed}"
+            )
+            return state
 
         updated_state = state.model_copy(deep=True)
 
@@ -457,11 +499,19 @@ class VoiceAgent:
             logger.info(
                 f"File-based flow: Executing voice analysis from audio file: {audio_path}")
 
-            # Run main analysis
-            voice_analysis = self.analyze(audio_path)
-
-            # Get transcript separately for state
-            transcript = self._transcribe_audio(audio_path)
+            # Run main analysis — let TranscriptionError propagate so the API
+            # can return a 422 with retry guidance instead of storing empty data.
+            # _analyze_with_transcript() runs Whisper only once and returns both
+            # the VoiceAnalysisModel and the transcript string.
+            try:
+                voice_analysis, transcript = self._analyze_with_transcript(
+                    audio_path)
+            except TranscriptionError:
+                # Re-raise: upstream (API layer / LangGraph error handler)
+                # should decide whether to retry or report failure.
+                logger.error(
+                    f"Transcription failed in file-based mode for: {audio_path}")
+                raise
 
             # Update state
             updated_state.transcript = transcript
@@ -539,7 +589,8 @@ class VoiceAgent:
                 speech_rate_wpm=speech_rate_wpm,
                 filler_ratio=filler_ratio,
                 clarity=clarity,
-                tone=tone
+                tone=tone,
+                is_computed=True  # Real metrics computed from transcript
             )
 
             # Update state
@@ -555,7 +606,9 @@ class VoiceAgent:
 
             return updated_state
 
-        # Mode 3: Empty transcript - use fallback metrics
+        # Mode 3: Empty transcript - use fallback metrics.
+        # is_computed intentionally left False so the next pipeline run
+        # will re-attempt analysis instead of treating this as real data.
         else:
             logger.warning(
                 "Empty or missing transcript - using fallback voice metrics")
@@ -563,7 +616,8 @@ class VoiceAgent:
                 speech_rate_wpm=0.0,
                 filler_ratio=0.0,
                 clarity=0.5,
-                tone="neutral"
+                tone="neutral",
+                is_computed=False  # Not real analysis; allows re-processing on retry
             )
             return updated_state
 
@@ -573,4 +627,10 @@ def voice_agent_node(state: InterviewState) -> InterviewState:
     """LangGraph node wrapper for VoiceAgent."""
     agent = VoiceAgent()
     updated_state = agent.execute(state)
-    return {"voice_analysis": updated_state.voice_analysis}
+    # IMPORTANT: must return both voice_analysis AND transcript so LangGraph
+    # merges the transcript into the shared state.  Returning only voice_analysis
+    # caused the transcript to always be empty in the final response.
+    return {
+        "voice_analysis": updated_state.voice_analysis,
+        "transcript": updated_state.transcript,
+    }

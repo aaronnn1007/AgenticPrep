@@ -90,19 +90,19 @@ Return ONLY the JSON object."""
 class RecommendationSystemAgent:
     """
     Agent responsible for generating actionable recommendations.
-    
+
     Design principles:
     - Convert quantitative data into qualitative feedback
     - Specific, actionable recommendations
     - Balanced (strengths + areas to improve)
     - Evidence-based from actual metrics
     """
-    
+
     def __init__(self):
         """Initialize with configured LLM."""
         self.config = get_llm_config("recommendation")
         self.llm = self._create_llm()
-    
+
     def _create_llm(self) -> ChatOpenAI:
         """Create LLM instance."""
         return ChatOpenAI(
@@ -111,7 +111,7 @@ class RecommendationSystemAgent:
             base_url=self.config.get("base_url"),
             temperature=self.config.get("temperature", 0.7),
         )
-    
+
     def _build_prompt(self, state: InterviewState) -> str:
         """Build recommendation prompt from complete state."""
         return RECOMMENDATION_PROMPT.format(
@@ -127,100 +127,106 @@ class RecommendationSystemAgent:
             correctness=state.answer_quality.correctness,
             depth=state.answer_quality.depth,
             structure=state.answer_quality.structure,
-            gaps=", ".join(state.answer_quality.gaps) if state.answer_quality.gaps else "none",
+            gaps=", ".join(
+                state.answer_quality.gaps) if state.answer_quality.gaps else "none",
             eye_contact=state.body_language.eye_contact,
             posture_stability=state.body_language.posture_stability,
             facial_expressiveness=state.body_language.facial_expressiveness,
             confidence=state.confidence_behavior.confidence,
             nervousness=state.confidence_behavior.nervousness,
             professionalism=state.confidence_behavior.professionalism,
-            behavioral_flags=", ".join(state.confidence_behavior.behavioral_flags)
+            behavioral_flags=", ".join(
+                state.confidence_behavior.behavioral_flags)
         )
-    
+
     def _call_llm(self, prompt: str, state: InterviewState) -> Dict[str, Any]:
         """Call LLM for recommendation generation."""
         try:
             messages = [
-                SystemMessage(content="You are a professional career coach. Always return valid JSON."),
+                SystemMessage(
+                    content="You are a professional career coach. Always return valid JSON."),
                 HumanMessage(content=prompt)
             ]
-            
+
             response = self.llm.invoke(messages)
             content = response.content
-            
+
             # Handle markdown
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
-            
+
             parsed = json.loads(content)
-            
+
             # Validate
             recommendations = RecommendationsModel(**parsed)
             return recommendations.model_dump()
-            
+
         except Exception as e:
             logger.error(f"Recommendation generation failed: {e}")
             return self._generate_fallback(state)
-    
+
     def _generate_fallback(self, state: InterviewState) -> Dict[str, Any]:
         """Generate fallback recommendations based on scores."""
         logger.warning("Using fallback recommendation generation")
-        
+
         strengths = []
         weaknesses = []
         improvement_plan = []
-        
+
         # Simple rule-based fallback
         if state.scores.technical >= 70:
             strengths.append("Strong technical knowledge demonstrated")
         else:
             weaknesses.append("Technical depth needs improvement")
-            improvement_plan.append("Review core concepts and practice explaining them")
-        
+            improvement_plan.append(
+                "Review core concepts and practice explaining them")
+
         if state.scores.communication >= 70:
             strengths.append("Effective communication skills")
         else:
             weaknesses.append("Communication clarity could be enhanced")
-            improvement_plan.append("Practice structuring answers with clear introduction, body, and conclusion")
-        
+            improvement_plan.append(
+                "Practice structuring answers with clear introduction, body, and conclusion")
+
         if state.scores.behavioral >= 70:
             strengths.append("Professional demeanor and confidence")
         else:
             weaknesses.append("Confidence and professionalism need work")
-            improvement_plan.append("Practice mock interviews to build confidence")
-        
+            improvement_plan.append(
+                "Practice mock interviews to build confidence")
+
         return {
             "strengths": strengths or ["Participated in the interview process"],
             "weaknesses": weaknesses or ["Continue developing interview skills"],
             "improvement_plan": improvement_plan or ["Practice regularly with mock interviews"]
         }
-    
+
     def execute(self, state: InterviewState) -> InterviewState:
         """
         Execute recommendation generation.
-        
+
         Prerequisites: All previous agents must have run (need scores and all metrics)
-        
+
         Returns:
             Updated state with recommendations populated
         """
         logger.info("Generating recommendations")
-        
+
         prompt = self._build_prompt(state)
         rec_data = self._call_llm(prompt, state)
         recommendations = RecommendationsModel(**rec_data)
-        
+
         updated_state = state.model_copy(deep=True)
         updated_state.recommendations = recommendations
-        
+
         logger.info(
             f"Recommendations generated: {len(recommendations.strengths)} strengths, "
             f"{len(recommendations.weaknesses)} weaknesses, "
             f"{len(recommendations.improvement_plan)} action items"
         )
-        
+
         return updated_state
 
 
@@ -229,4 +235,5 @@ def recommendation_node(state: InterviewState) -> InterviewState:
     """LangGraph node wrapper for RecommendationSystemAgent."""
     agent = RecommendationSystemAgent()
     updated_state = agent.execute(state)
-    return updated_state
+    # Return only the key we're updating (LangGraph merges it into state)
+    return {"recommendations": updated_state.recommendations}

@@ -491,14 +491,14 @@ def confidence_behavior_node(state: InterviewState) -> InterviewState:
         if not state.voice_analysis or not state.answer_quality:
             logger.warning(
                 "ConfidenceBehaviorNode: Missing required inputs, using defaults")
-            updated_state = state.model_copy(deep=True)
-            updated_state.confidence_behavior = ConfidenceBehaviorModel(
-                confidence=0.5,
-                nervousness=0.5,
-                professionalism=0.5,
-                behavioral_flags=['insufficient_data']
-            )
-            return updated_state
+            return {
+                "confidence_behavior": ConfidenceBehaviorModel(
+                    confidence=0.5,
+                    nervousness=0.5,
+                    professionalism=0.5,
+                    behavioral_flags=['insufficient_data']
+                )
+            }
 
         # Convert to dicts for agent (agent expects dict format)
         voice_analysis_dict = {
@@ -537,16 +537,17 @@ def confidence_behavior_node(state: InterviewState) -> InterviewState:
             f"professionalism={result.professionalism:.2f}"
         )
 
-        return updated_state
+        # Return only the key we're updating (LangGraph merges it into state)
+        return {"confidence_behavior": updated_state.confidence_behavior}
 
     except Exception as e:
         logger.error(f"ConfidenceBehaviorNode: Failed - {e}", exc_info=True)
-        # Set defaults with error
-        updated_state = state.model_copy(deep=True)
-        updated_state.confidence_behavior = ConfidenceBehaviorModel(
-            confidence=0.5,
-            nervousness=0.5,
-            professionalism=0.5,
-            behavioral_flags=[f'error: {str(e)}']
-        )
-        return updated_state
+        # Return defaults with error flag
+        return {
+            "confidence_behavior": ConfidenceBehaviorModel(
+                confidence=0.5,
+                nervousness=0.5,
+                professionalism=0.5,
+                behavioral_flags=[f'error: {str(e)}']
+            )
+        }

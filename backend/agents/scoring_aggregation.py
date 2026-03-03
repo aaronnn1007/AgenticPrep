@@ -490,6 +490,16 @@ def scoring_aggregation_node(state: "InterviewState") -> "InterviewState":
             )
             return updated_state
 
+        # Log received answer_quality metrics for debugging
+        logger.info(
+            f"ScoringAggregationNode: Received answer_quality - "
+            f"relevance={answer_quality.relevance:.2f}, "
+            f"correctness={answer_quality.correctness:.2f}, "
+            f"depth={answer_quality.depth:.2f}, "
+            f"structure={answer_quality.structure:.2f}, "
+            f"gaps_count={len(answer_quality.gaps)}"
+        )
+
         # Convert to dict for agent (agent expects dict format)
         answer_quality_dict = {
             'relevance': answer_quality.relevance,
@@ -550,16 +560,17 @@ def scoring_aggregation_node(state: "InterviewState") -> "InterviewState":
             f"overall={overall_with_behavioral:.1f}"
         )
 
-        return updated_state
+        # Return only the key we're updating (LangGraph merges it into state)
+        return {"scores": updated_state.scores}
 
     except Exception as e:
         logger.error(f"ScoringAggregationNode: Failed - {e}", exc_info=True)
-        # Set defaults with error
-        updated_state = state.model_copy(deep=True)
-        updated_state.scores = ScoresModel(
-            technical=0.0,
-            communication=0.0,
-            behavioral=0.0,
-            overall=0.0
-        )
-        return updated_state
+        # Return default scores on error
+        return {
+            "scores": ScoresModel(
+                technical=0.0,
+                communication=0.0,
+                behavioral=0.0,
+                overall=0.0
+            )
+        }

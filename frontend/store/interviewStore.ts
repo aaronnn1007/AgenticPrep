@@ -5,10 +5,9 @@ import type {
   RecordingState,
   SubmitAnswerResponse,
 } from "@/types/interview";
+import { submitAnswer, ApiError } from "@/lib/api";
 
 export type { RecordingState };
-
-const API = () => process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 interface InterviewState {
   /* session config (set from landing page) */
@@ -128,30 +127,22 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
     set({ uploadError: null });
 
     try {
-      const formData = new FormData();
-      formData.append("interview_id", interviewId ?? "");
-      formData.append("role", role || "fullstack");
-      formData.append("experience_level", experienceLevel || "mid");
-      formData.append("audio_file", blob, `answer_${interviewId}.webm`);
-      // video_file is optional — the webm already contains both tracks
-
-      const res = await fetch(`${API()}/submit-answer`, {
-        method: "POST",
-        body: formData,
+      const result = await submitAnswer({
+        interview_id: interviewId ?? "",
+        role: role || "fullstack",
+        experience_level: experienceLevel || "mid",
+        audio_file: blob,
+        audio_filename: `answer_${interviewId}.webm`,
       });
-
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
-        throw new Error(detail.detail ?? `Server responded with ${res.status}`);
-      }
-
-      const result: SubmitAnswerResponse = await res.json();
       set({ analysisResult: result, recordingState: "idle" });
     } catch (err) {
-      set({
-        uploadError: err instanceof Error ? err.message : "Upload failed.",
-        recordingState: "idle",
-      });
+      const message =
+        err instanceof ApiError
+          ? err.detail
+          : err instanceof Error
+          ? err.message
+          : "Upload failed.";
+      set({ uploadError: message, recordingState: "idle" });
     }
   },
 

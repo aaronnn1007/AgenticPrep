@@ -11,8 +11,11 @@ Architecture:
 - Comprehensive error handling and logging
 
 Workflow:
-START → QuestionGeneration → [VoiceAgent, AnswerQuality, BodyLanguage] (parallel) 
-      → ConfidenceBehavior → ScoringAggregation → Recommendation → END
+START → QuestionGeneration → [VoiceAgent → AnswerQuality] (chain) + [BodyLanguage] (parallel)
+      → ConfidenceInference → ScoringAggregation → Recommendation → END
+
+Note: AnswerQuality MUST run after VoiceAgent because it needs the transcript.
+      Running them in parallel causes empty transcript → all scores = 0.0.
 """
 
 import logging
@@ -55,10 +58,14 @@ class InterviewAnalyzerGraph:
 
         Flow:
         1. question_generation: Generate interview question
-        2. [parallel] voice_agent, answer_quality, body_language: Independent analyses
-        3. confidence_behavior: Synthesize behavioral traits
-        4. scoring_aggregation: Compute deterministic scores
-        5. recommendation: Generate actionable feedback
+        2. [parallel] voice_agent + body_language: Start audio/video analysis
+        3. answer_quality: Runs AFTER voice_agent (needs transcript)
+        4. confidence_behavior: Synthesize behavioral traits (after step 2 & 3)
+        5. scoring_aggregation: Compute deterministic scores
+        6. recommendation: Generate actionable feedback
+
+        CRITICAL: answer_quality depends on transcript from voice_agent.
+        Running them in parallel causes transcript="" → all scores = 0.
 
         Returns:
             Compiled StateGraph
@@ -68,9 +75,9 @@ class InterviewAnalyzerGraph:
         # Create graph with InterviewState as state type
         # Note: LangGraph works with dicts, so we use dict as state schema
         workflow = StateGraph(
-        InterviewState,
-        # This tells LangGraph to merge updates field-by-field
-        # instead of treating the whole state as one value
+            InterviewState,
+            # This tells LangGraph to merge updates field-by-field
+            # instead of treating the whole state as one value
         )
 
         # Add nodes for each agent
@@ -86,14 +93,21 @@ class InterviewAnalyzerGraph:
         workflow.set_entry_point("question_generation")
 
         # Define edges (workflow sequence)
-        # After question generation, run three analyses in parallel
+        # voice_agent runs first — it transcribes the audio and writes state.transcript.
+        # answer_quality must run AFTER voice_agent so it receives a populated transcript;
+        # running it in parallel meant transcript="" when the LLM was called, which
+        # caused all answer-quality metrics (and therefore all scores) to be 0.
+        # body_language is independent of transcript so it stays parallel with voice_agent.
         workflow.add_edge("question_generation", "voice_agent")
-        workflow.add_edge("question_generation", "answer_quality")
         workflow.add_edge("question_generation", "body_language")
 
-        # After all three complete, run confidence inference
-        # Note: In LangGraph, parallel branches automatically wait for all to complete
-        workflow.add_edge("voice_agent", "confidence_behavior")
+        # answer_quality depends on the transcript produced by voice_agent
+        workflow.add_edge("voice_agent", "answer_quality")
+
+        # After answer_quality and body_language both complete, run confidence inference.
+        # Note: voice_agent → answer_quality → confidence_behavior is the chain, so we
+        # do NOT add a direct voice_agent → confidence_behavior edge (that would cause
+        # a concurrent update error since confidence_behavior would be triggered twice).
         workflow.add_edge("answer_quality", "confidence_behavior")
         workflow.add_edge("body_language", "confidence_behavior")
 
