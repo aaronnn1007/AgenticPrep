@@ -116,16 +116,30 @@ settings = Settings()
 # All weights must sum to 1.0 within each category.
 SCORING_WEIGHTS = {
     "technical": {
-        "correctness": 0.6,  # Weight for correctness in technical score
-        "depth": 0.4         # Weight for depth in technical score
+        # Weight for correctness in technical score
+        "correctness": settings.SCORE_TECHNICAL_CORRECTNESS_WEIGHT,
+        # Weight for depth in technical score
+        "depth": settings.SCORE_TECHNICAL_DEPTH_WEIGHT
     },
     "communication": {
-        "structure": 0.7,    # Weight for structure in communication score
-        "relevance": 0.3     # Weight for relevance in communication score
+        # Weight for structure in communication score
+        "structure": settings.SCORE_COMMUNICATION_STRUCTURE_WEIGHT,
+        # Weight for relevance in communication score
+        "relevance": settings.SCORE_COMMUNICATION_CLARITY_WEIGHT
+    },
+    "behavioral": {
+        # Weight for confidence in behavioral score
+        "confidence": settings.SCORE_BEHAVIORAL_CONFIDENCE_WEIGHT,
+        # Weight for professionalism in behavioral score
+        "professionalism": settings.SCORE_BEHAVIORAL_PROFESSIONALISM_WEIGHT
     },
     "overall": {
-        "technical": 0.6,    # Weight for technical in overall score
-        "communication": 0.4  # Weight for communication in overall score
+        # Weight for technical in overall score
+        "technical": settings.SCORE_OVERALL_TECHNICAL_WEIGHT,
+        # Weight for communication in overall score
+        "communication": settings.SCORE_OVERALL_COMMUNICATION_WEIGHT,
+        # Weight for behavioral in overall score
+        "behavioral": settings.SCORE_OVERALL_BEHAVIORAL_WEIGHT
     }
 }
 
