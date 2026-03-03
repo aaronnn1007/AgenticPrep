@@ -179,7 +179,7 @@ SCORING INTERPRETATION:
 
 RESPONSE FORMAT:
 You MUST respond with ONLY valid JSON in this EXACT format (no markdown, no prose):
-{{
+{
     "strengths": [
         "Specific strength with evidence from high-scoring area",
         "Another strength tied to strong metrics"
@@ -193,10 +193,10 @@ You MUST respond with ONLY valid JSON in this EXACT format (no markdown, no pros
         "Actionable step 2 with concrete advice",
         "Actionable step 3 for continued growth"
     ]
-}}
+}
 
 EXAMPLE (for reference only, adapt to actual data):
-{{
+{
     "strengths": [
         "Strong technical correctness demonstrated with accurate explanations",
         "Well-structured responses with clear logical flow"
@@ -210,7 +210,7 @@ EXAMPLE (for reference only, adapt to actual data):
         "Work on reducing filler words and maintaining steady speaking pace",
         "Study common interview patterns and prepare structured frameworks for answers"
     ]
-}}
+}
 
 Return ONLY the JSON object with no additional text."""
 
