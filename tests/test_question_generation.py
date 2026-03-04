@@ -574,7 +574,8 @@ def test_node_wires_junior_difficulty():
         text="What are the four pillars of OOP?",
         topic="OOP",
         difficulty=0.3,
-        intent=["Names all four pillars", "Provides a brief definition", "Gives a simple example"],
+        intent=["Names all four pillars",
+                "Provides a brief definition", "Gives a simple example"],
     )
 
     dummy_state = InterviewState(
@@ -591,7 +592,8 @@ def test_node_wires_junior_difficulty():
         return QuestionOutput(question=QuestionDetails(**fake_question.model_dump()))
 
     with patch.object(
-        __import__("backend.agents.question_generation", fromlist=["QuestionGenerationAgent"]).QuestionGenerationAgent,
+        __import__("backend.agents.question_generation", fromlist=[
+                   "QuestionGenerationAgent"]).QuestionGenerationAgent,
         "generate",
         side_effect=mock_generate,
     ):
@@ -615,7 +617,8 @@ def test_node_wires_mid_difficulty():
         text="How would you implement pagination in a REST API?",
         topic="APIs",
         difficulty=0.55,
-        intent=["Explains cursor vs offset", "Mentions performance", "Discusses edge cases"],
+        intent=["Explains cursor vs offset",
+                "Mentions performance", "Discusses edge cases"],
     )
 
     dummy_state = InterviewState(
@@ -632,7 +635,8 @@ def test_node_wires_mid_difficulty():
         return QuestionOutput(question=QuestionDetails(**fake_question.model_dump()))
 
     with patch.object(
-        __import__("backend.agents.question_generation", fromlist=["QuestionGenerationAgent"]).QuestionGenerationAgent,
+        __import__("backend.agents.question_generation", fromlist=[
+                   "QuestionGenerationAgent"]).QuestionGenerationAgent,
         "generate",
         side_effect=mock_generate,
     ):
@@ -655,7 +659,8 @@ def test_node_wires_senior_difficulty():
         text="Design a distributed rate-limiting system for 100K requests/sec.",
         topic="System Design",
         difficulty=0.8,
-        intent=["Proposes distributed counters", "Discusses consistency trade-offs", "Handles failure modes"],
+        intent=["Proposes distributed counters",
+                "Discusses consistency trade-offs", "Handles failure modes"],
     )
 
     dummy_state = InterviewState(
@@ -672,7 +677,8 @@ def test_node_wires_senior_difficulty():
         return QuestionOutput(question=QuestionDetails(**fake_question.model_dump()))
 
     with patch.object(
-        __import__("backend.agents.question_generation", fromlist=["QuestionGenerationAgent"]).QuestionGenerationAgent,
+        __import__("backend.agents.question_generation", fromlist=[
+                   "QuestionGenerationAgent"]).QuestionGenerationAgent,
         "generate",
         side_effect=mock_generate,
     ):
@@ -731,4 +737,3 @@ def test_prompt_senior_tier_guidance():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
-
