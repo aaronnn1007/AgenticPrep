@@ -93,6 +93,21 @@ class RecommendationsModel(BaseModel):
         default_factory=list, description="Specific actionable steps")
 
 
+class QuestionResult(BaseModel):
+    """Per-question analysis result for multi-question interviews."""
+    question: Optional[QuestionModel] = None
+    transcript: str = Field(
+        "", description="Transcription for this question's answer")
+    voice_analysis: VoiceAnalysisModel = Field(
+        default_factory=VoiceAnalysisModel)
+    answer_quality: AnswerQualityModel = Field(
+        default_factory=AnswerQualityModel)
+    body_language: BodyLanguageModel = Field(default_factory=BodyLanguageModel)
+    confidence_behavior: ConfidenceBehaviorModel = Field(
+        default_factory=ConfidenceBehaviorModel)
+    scores: ScoresModel = Field(default_factory=ScoresModel)
+
+
 class InterviewState(BaseModel):
     """
     Global state object passed through all LangGraph nodes.
@@ -109,9 +124,19 @@ class InterviewState(BaseModel):
                               description="Unique interview session identifier")
     role: str = Field(..., description="Job role for the interview")
     experience_level: str = Field(
-        ..., description="Candidate experience level (Fresher, Junior, Mid, Senior)")
+        ..., description="Candidate experience level (Junior, Mid, Senior)")
 
-    # Agent outputs - initialized as empty/default, populated by respective agents
+    # Multi-question configuration
+    num_questions: int = Field(
+        1, ge=1, le=10, description="Total number of questions in this session")
+    current_question_index: int = Field(
+        0, ge=0, description="0-based index of the question being analyzed")
+    time_per_question: int = Field(
+        120, ge=30, le=600, description="Time limit per question in seconds")
+    question_results: List[QuestionResult] = Field(
+        default_factory=list, description="Collected results for each question")
+
+    # Agent outputs — workspace for the current question being analyzed
     question: Optional[QuestionModel] = None
     transcript: str = Field(
         "", description="Full transcription of candidate's answer")

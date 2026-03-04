@@ -62,6 +62,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [role, setRole] = useState<string>("");
   const [experience, setExperience] = useState<string>("");
+  const [numQuestions, setNumQuestions] = useState<number>(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +80,12 @@ export default function LandingPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role, experience_level: experience }),
+          body: JSON.stringify({
+            role,
+            experience_level: experience,
+            num_questions: numQuestions,
+            time_per_question: 120,
+          }),
         }
       );
 
@@ -93,6 +99,8 @@ export default function LandingPage() {
       store.setSession(
         data.interview_id,
         data.question.text,
+        data.num_questions,
+        data.time_per_question,
         data.question.topic,
         data.question.difficulty,
         data.question.intent,
@@ -211,6 +219,27 @@ export default function LandingPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Number of questions */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Number of questions</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={3}
+                  max={10}
+                  value={numQuestions}
+                  onChange={(e) => setNumQuestions(Number(e.target.value))}
+                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-muted accent-primary"
+                />
+                <span className="w-8 text-center text-sm font-semibold tabular-nums">
+                  {numQuestions}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {numQuestions} questions &middot; ~{numQuestions * 2} min
+              </p>
             </div>
 
             {/* Error banner */}

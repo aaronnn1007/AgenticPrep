@@ -27,13 +27,7 @@ function Spinner({ className = "" }: { className?: string }) {
   );
 }
 
-function ScoreBar({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function ScoreBar({ label, value }: { label: string; value: number }) {
   const color =
     value >= 70
       ? "bg-green-500"
@@ -99,21 +93,27 @@ function ResultsContent() {
   const router = useRouter();
   const params = useSearchParams();
   const interviewId = params.get("id") ?? "";
-  const { analysisResult, question, reset } = useInterviewStore();
-  const [transcriptOpen, setTranscriptOpen] = useState(false);
+  const { completionResult, analysisResult, question, reset } = useInterviewStore();
+  const [expandedQ, setExpandedQ] = useState<number | null>(null);
 
   // Redirect to home if no results
   useEffect(() => {
-    if (!analysisResult) {
+    if (!completionResult && !analysisResult) {
       router.replace("/");
     }
-  }, [analysisResult, router]);
+  }, [completionResult, analysisResult, router]);
 
-  if (!analysisResult) {
-    return null; // Will redirect
-  }
+  if (!completionResult && !analysisResult) return null;
 
-  const { scores, recommendations, transcript } = analysisResult;
+  // Determine scores & recommendations source
+  const isMulti = !!completionResult;
+  const scores = isMulti
+    ? completionResult!.aggregate_scores
+    : analysisResult!.scores;
+  const recommendations = isMulti
+    ? completionResult!.recommendations
+    : analysisResult!.recommendations;
+  const questionResults = isMulti ? completionResult!.question_results : [];
 
   function handleNewInterview() {
     reset();
@@ -129,18 +129,24 @@ function ResultsContent() {
             <h1 className="text-2xl font-bold">Interview Results</h1>
             <p className="text-sm text-muted-foreground">
               Session {interviewId}
+              {isMulti && (
+                <span> &middot; {questionResults.length} questions</span>
+              )}
             </p>
           </div>
           <CircularScore value={scores.overall} />
         </div>
 
-        {/* ── Scores ── */}
+        {/* ── Aggregate Scores ── */}
         <Card className="border-border/60 shadow-lg">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Performance Scores</CardTitle>
+            <CardTitle className="text-lg">
+              {isMulti ? "Aggregate Performance" : "Performance Scores"}
+            </CardTitle>
             <CardDescription>
-              Breakdown across technical, communication, and behavioral
-              dimensions.
+              {isMulti
+                ? "Averaged across all questions."
+                : "Breakdown across technical, communication, and behavioral dimensions."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -153,13 +159,93 @@ function ResultsContent() {
           </CardContent>
         </Card>
 
+        {/* ── Per-Question Breakdown (multi-question only) ── */}
+        {isMulti && questionResults.length > 0 && (
+          <Card className="border-border/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Per-Question Breakdown</CardTitle>
+              <CardDescription>
+                Click a question to see its transcript and scores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {questionResults.map((qr, idx) => {
+                const isExpanded = expandedQ === idx;
+                return (
+                  <div
+                    key={idx}
+                    className="rounded-lg border border-border overflow-hidden"
+                  >
+                    <button
+                      className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-muted/40 transition-colors"
+                      onClick={() => setExpandedQ(isExpanded ? null : idx)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-xs">
+                          Q{idx + 1}
+                        </Badge>
+                        <span className="text-sm font-medium">
+                          {qr.question?.text
+                            ? qr.question.text.length > 80
+                              ? qr.question.text.slice(0, 80) + "…"
+                              : qr.question.text
+                            : "Question " + (idx + 1)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold tabular-nums">
+                          {qr.scores.overall.toFixed(0)}%
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {isExpanded ? "▲" : "▼"}
+                        </span>
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="border-t border-border px-4 py-4 space-y-4 bg-muted/20">
+                        {/* Per-Q scores */}
+                        <div className="space-y-2">
+                          <ScoreBar
+                            label="Technical"
+                            value={qr.scores.technical}
+                          />
+                          <ScoreBar
+                            label="Communication"
+                            value={qr.scores.communication}
+                          />
+                          <ScoreBar
+                            label="Behavioral"
+                            value={qr.scores.behavioral}
+                          />
+                        </div>
+
+                        {/* Transcript */}
+                        {qr.transcript && (
+                          <div>
+                            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              Your Answer
+                            </p>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+                              {qr.transcript}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         {/* ── Recommendations ── */}
         <div className="grid gap-6 sm:grid-cols-2">
-          {/* Strengths */}
           <Card className="border-border/60">
             <CardHeader className="pb-2">
               <CardTitle className="text-base text-green-600 dark:text-green-400">
-                ✅ Strengths
+                Strengths
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -175,11 +261,10 @@ function ResultsContent() {
             </CardContent>
           </Card>
 
-          {/* Weaknesses */}
           <Card className="border-border/60">
             <CardHeader className="pb-2">
               <CardTitle className="text-base text-red-600 dark:text-red-400">
-                ⚠️ Areas to Improve
+                Areas to Improve
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -200,7 +285,7 @@ function ResultsContent() {
         {recommendations.improvement_plan.length > 0 && (
           <Card className="border-border/60">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">📋 Improvement Plan</CardTitle>
+              <CardTitle className="text-base">Improvement Plan</CardTitle>
             </CardHeader>
             <CardContent>
               <ol className="list-decimal space-y-1 pl-5 text-sm">
@@ -212,30 +297,22 @@ function ResultsContent() {
           </Card>
         )}
 
-        {/* ── Transcript (collapsible) ── */}
-        <Card className="border-border/60">
-          <CardHeader
-            className="pb-2 cursor-pointer select-none"
-            onClick={() => setTranscriptOpen((o) => !o)}
-          >
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">🗣️ Your Answer (Transcript)</CardTitle>
-              <span className="text-sm text-muted-foreground">
-                {transcriptOpen ? "▲ Hide" : "▼ Show"}
-              </span>
-            </div>
-            <CardDescription>
-              {question && `Question: ${question}`}
-            </CardDescription>
-          </CardHeader>
-          {transcriptOpen && (
+        {/* ── Single-question transcript (legacy) ── */}
+        {!isMulti && analysisResult && (
+          <Card className="border-border/60">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Your Answer (Transcript)</CardTitle>
+              <CardDescription>
+                {question && `Question: ${question}`}
+              </CardDescription>
+            </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                {transcript || "No transcript available."}
+                {analysisResult.transcript || "No transcript available."}
               </p>
             </CardContent>
-          )}
-        </Card>
+          </Card>
+        )}
 
         {/* ── Actions ── */}
         <div className="flex justify-center pb-8">

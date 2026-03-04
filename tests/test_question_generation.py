@@ -49,10 +49,10 @@ def mock_llm():
 # DIFFICULTY CALIBRATION TESTS
 # ==========================================================
 
-def test_fresher_easy_question():
+def test_junior_easy_question():
     """
-    Test: Fresher-level question generation.
-    Expected: difficulty ~0.2-0.4, simple conceptual question.
+    Test: Junior-level question generation.
+    Expected: difficulty ~0.2-0.4, fundamental / definitional question.
     """
     mock_response = Mock()
     mock_response.content = '''
@@ -78,7 +78,7 @@ def test_fresher_easy_question():
         agent = QuestionGenerationAgent()
         result = agent.generate(
             role="Software Engineer",
-            experience_level="Fresher",
+            experience_level="Junior",
             difficulty_target=0.3
         )
 
@@ -87,7 +87,7 @@ def test_fresher_easy_question():
     assert result.question.text
     assert len(result.question.intent) >= 3
     logger.info(
-        f"✓ Fresher question generated: difficulty={result.question.difficulty}")
+        f"\u2713 Junior question generated: difficulty={result.question.difficulty}")
 
 
 def test_mid_moderate_question():
@@ -208,7 +208,7 @@ def test_topic_constraint_respected():
         agent = QuestionGenerationAgent()
         result = agent.generate(
             role="Software Engineer",
-            experience_level="Fresher",
+            experience_level="Junior",
             topic_constraints=["OOP"],
             difficulty_target=0.3
         )
@@ -487,7 +487,7 @@ def test_missing_intent_items():
         agent = QuestionGenerationAgent()
         result = agent.generate(
             role="Software Engineer",
-            experience_level="Fresher",
+            experience_level="Junior",
             difficulty_target=0.3
         )
 
@@ -558,5 +558,177 @@ def test_system_prompt():
     logger.info("✓ System prompt validated")
 
 
+# ==========================================================
+# NODE DIFFICULTY WIRING TESTS
+# ==========================================================
+
+def test_node_wires_junior_difficulty():
+    """
+    Test: question_generation_node passes difficulty_target=0.3 for Junior.
+    """
+    from unittest.mock import patch, MagicMock
+    from backend.agents.question_generation import question_generation_node
+    from backend.models.state import InterviewState, QuestionModel
+
+    fake_question = QuestionModel(
+        text="What are the four pillars of OOP?",
+        topic="OOP",
+        difficulty=0.3,
+        intent=["Names all four pillars", "Provides a brief definition", "Gives a simple example"],
+    )
+
+    dummy_state = InterviewState(
+        interview_id="test_001",
+        role="Software Engineer",
+        experience_level="Junior",
+    )
+
+    captured = {}
+
+    def mock_generate(*args, **kwargs):
+        captured.update(kwargs)
+        from backend.agents.question_generation import QuestionOutput, QuestionDetails
+        return QuestionOutput(question=QuestionDetails(**fake_question.model_dump()))
+
+    with patch.object(
+        __import__("backend.agents.question_generation", fromlist=["QuestionGenerationAgent"]).QuestionGenerationAgent,
+        "generate",
+        side_effect=mock_generate,
+    ):
+        question_generation_node(dummy_state)
+
+    assert "difficulty_target" in captured, "difficulty_target was not passed to agent.generate()"
+    assert captured["difficulty_target"] == 0.3, (
+        f"Expected difficulty_target=0.3 for Junior, got {captured['difficulty_target']}"
+    )
+    logger.info("✓ Junior node: difficulty_target=0.3 wired correctly")
+
+
+def test_node_wires_mid_difficulty():
+    """
+    Test: question_generation_node passes difficulty_target=0.55 for Mid.
+    """
+    from backend.agents.question_generation import question_generation_node
+    from backend.models.state import InterviewState, QuestionModel
+
+    fake_question = QuestionModel(
+        text="How would you implement pagination in a REST API?",
+        topic="APIs",
+        difficulty=0.55,
+        intent=["Explains cursor vs offset", "Mentions performance", "Discusses edge cases"],
+    )
+
+    dummy_state = InterviewState(
+        interview_id="test_002",
+        role="Backend Developer",
+        experience_level="Mid",
+    )
+
+    captured = {}
+
+    def mock_generate(*args, **kwargs):
+        captured.update(kwargs)
+        from backend.agents.question_generation import QuestionOutput, QuestionDetails
+        return QuestionOutput(question=QuestionDetails(**fake_question.model_dump()))
+
+    with patch.object(
+        __import__("backend.agents.question_generation", fromlist=["QuestionGenerationAgent"]).QuestionGenerationAgent,
+        "generate",
+        side_effect=mock_generate,
+    ):
+        question_generation_node(dummy_state)
+
+    assert captured.get("difficulty_target") == 0.55, (
+        f"Expected difficulty_target=0.55 for Mid, got {captured.get('difficulty_target')}"
+    )
+    logger.info("✓ Mid node: difficulty_target=0.55 wired correctly")
+
+
+def test_node_wires_senior_difficulty():
+    """
+    Test: question_generation_node passes difficulty_target=0.80 for Senior.
+    """
+    from backend.agents.question_generation import question_generation_node
+    from backend.models.state import InterviewState, QuestionModel
+
+    fake_question = QuestionModel(
+        text="Design a distributed rate-limiting system for 100K requests/sec.",
+        topic="System Design",
+        difficulty=0.8,
+        intent=["Proposes distributed counters", "Discusses consistency trade-offs", "Handles failure modes"],
+    )
+
+    dummy_state = InterviewState(
+        interview_id="test_003",
+        role="Senior Software Engineer",
+        experience_level="Senior",
+    )
+
+    captured = {}
+
+    def mock_generate(*args, **kwargs):
+        captured.update(kwargs)
+        from backend.agents.question_generation import QuestionOutput, QuestionDetails
+        return QuestionOutput(question=QuestionDetails(**fake_question.model_dump()))
+
+    with patch.object(
+        __import__("backend.agents.question_generation", fromlist=["QuestionGenerationAgent"]).QuestionGenerationAgent,
+        "generate",
+        side_effect=mock_generate,
+    ):
+        question_generation_node(dummy_state)
+
+    assert captured.get("difficulty_target") == 0.80, (
+        f"Expected difficulty_target=0.80 for Senior, got {captured.get('difficulty_target')}"
+    )
+    logger.info("✓ Senior node: difficulty_target=0.80 wired correctly")
+
+
+def test_prompt_contains_role_alignment():
+    """
+    Test: build_question_prompt includes a role-alignment instruction.
+    """
+    prompt = build_question_prompt(
+        role="Data Scientist",
+        experience_level="Mid",
+        topic_constraints=None,
+        difficulty_target=0.55,
+    )
+    assert "Data Scientist" in prompt
+    assert "ROLE ALIGNMENT" in prompt
+    logger.info("✓ Prompt contains role-alignment instruction")
+
+
+def test_prompt_junior_tier_guidance():
+    """
+    Test: Junior difficulty_target produces foundational question guidance.
+    """
+    prompt = build_question_prompt(
+        role="Frontend Developer",
+        experience_level="Junior",
+        topic_constraints=None,
+        difficulty_target=0.3,
+    )
+    assert "Junior" in prompt or "Fundamental" in prompt
+    assert "four pillars" in prompt.lower() or "fundamental" in prompt.lower()
+    logger.info("✓ Prompt contains Junior/Fundamental tier guidance")
+
+
+def test_prompt_senior_tier_guidance():
+    """
+    Test: Senior difficulty_target produces architecture question guidance.
+    """
+    prompt = build_question_prompt(
+        role="Senior Software Engineer",
+        experience_level="Senior",
+        topic_constraints=None,
+        difficulty_target=0.8,
+    )
+    assert "Senior" in prompt or "Architecture" in prompt
+    assert "design" in prompt.lower()
+    logger.info("✓ Prompt contains Senior/Architecture tier guidance")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
+

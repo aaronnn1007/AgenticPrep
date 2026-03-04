@@ -55,7 +55,7 @@ class QuestionInput(BaseModel):
     """
     role: str = Field(..., description="Job role for the interview (e.g., 'Software Engineer', 'Data Scientist')")
     experience_level: str = Field(
-        ..., description="Experience level: 'Fresher', 'Mid', or 'Senior'")
+        ..., description="Experience level: 'Junior', 'Mid', or 'Senior'")
     topic_constraints: Optional[List[str]] = Field(
         None, description="Optional list of allowed topics")
     difficulty_target: float = Field(
@@ -107,6 +107,7 @@ Your ONLY task is to generate interview questions. You MUST:
 2. NEVER generate the answer or solution
 3. Generate clear, objective questions (no vague or subjective questions)
 4. Align question complexity with the specified difficulty level
+5. Calibrate question depth strictly to the candidate's experience level and ensure all questions are directly relevant to the stated role
 
 You will receive question parameters and must return a JSON object exactly matching the specified format."""
 
@@ -115,20 +116,19 @@ def build_question_prompt(
     role: str,
     experience_level: str,
     topic_constraints: Optional[List[str]],
-    difficulty_target: float
+    difficulty_target: float,
+    previous_questions: Optional[List[str]] = None
 ) -> str:
     """
     Build question generation prompt with difficulty calibration.
 
     Difficulty Scale Definition:
-    - 0.0-0.3: Basic recall, definitions, simple concepts
-    - 0.3-0.5: Application of concepts, moderate problem-solving
-    - 0.5-0.7: Analysis, comparison, design decisions
-    - 0.7-0.9: System thinking, trade-offs, complex scenarios
-    - 0.9-1.0: Expert-level architecture, optimization, critical analysis
+    - 0.0-0.4: Junior / Fundamental — definitions, recall, basic application
+    - 0.4-0.7: Mid / Application — practical skills, comparison, moderate problem-solving
+    - 0.7-1.0: Senior / Architecture — system design, trade-offs, advanced optimization
 
     Experience Level Mapping:
-    - Fresher: Target 0.2-0.4 (fundamentals and basic application)
+    - Junior: Target 0.2-0.4 (fundamentals and basic application)
     - Mid: Target 0.4-0.7 (application and analysis)
     - Senior: Target 0.6-0.9 (design and architecture)
 
@@ -155,42 +155,71 @@ Select an appropriate topic based on the role and experience level.
 Common topics: Algorithms, Data Structures, OOP, System Design, Databases, APIs, Testing, etc.
 """
 
-    # Difficulty calibration
-    if difficulty_target <= 0.3:
+    # Difficulty calibration — three tiers aligned with experience level
+    if difficulty_target <= 0.4:
         difficulty_guidance = """
-DIFFICULTY TARGET: {:.1f} (Basic/Recall)
-- Ask for definitions, basic concepts, or simple recall
-- Example: "What is encapsulation in OOP?" (difficulty ~0.2)
-- Example: "Explain what an API is." (difficulty ~0.3)
-""".format(difficulty_target)
-    elif difficulty_target <= 0.5:
-        difficulty_guidance = """
-DIFFICULTY TARGET: {:.1f} (Moderate/Application)
-- Ask to apply concepts or solve moderate problems
-- Example: "How would you implement a stack using arrays?" (difficulty ~0.4)
-- Example: "Design a basic authentication system." (difficulty ~0.5)
+DIFFICULTY TARGET: {:.1f} (Junior / Fundamental)
+- Ask for definitions, basic recall, or very simple application
+- Focus on foundational knowledge a new graduate should know
+- Questions must be answerable without professional experience
+- GOOD examples (match this style):
+    "What are the four pillars of OOP?"
+    "What is the difference between a list and a tuple in Python?"
+    "What does HTTP status code 404 mean?"
+    "What is a primary key in a database?"
+    "Explain what version control is and why it is used."
+- AVOID questions requiring design decisions, system experience, or advanced trade-offs
 """.format(difficulty_target)
     elif difficulty_target <= 0.7:
         difficulty_guidance = """
-DIFFICULTY TARGET: {:.1f} (Analysis/Design)
-- Ask to analyze, compare, or make design decisions
-- Example: "Compare SQL vs NoSQL for an e-commerce application." (difficulty ~0.6)
-- Example: "Design a caching strategy for a high-traffic API." (difficulty ~0.7)
+DIFFICULTY TARGET: {:.1f} (Mid / Application)
+- Ask to apply concepts, solve moderate problems, or compare approaches
+- Focus on practical skills a developer with 2-4 years of experience would have
+- GOOD examples (match this style):
+    "How would you implement pagination in a REST API?"
+    "Explain the difference between SQL JOINs and when to use each."
+    "How does React's virtual DOM work and why is it useful?"
+    "What are ACID properties and why do they matter?"
+    "Describe how you would approach debugging a slow database query."
+- AVOID questions requiring large-scale system design or senior-level architecture
 """.format(difficulty_target)
     else:
         difficulty_guidance = """
-DIFFICULTY TARGET: {:.1f} (Advanced/Architecture)
-- Ask about system architecture, trade-offs, or optimization
-- Example: "Design a distributed rate limiting system." (difficulty ~0.8)
-- Example: "How would you handle eventual consistency in a microservices architecture?" (difficulty ~0.9)
+DIFFICULTY TARGET: {:.1f} (Senior / Architecture)
+- Ask about system design, architecture trade-offs, or advanced optimization
+- Focus on skills a senior engineer with 5+ years of experience would have
+- GOOD examples (match this style):
+    "Design a distributed rate-limiting system for 100K requests/sec."
+    "How would you handle eventual consistency in a microservices architecture?"
+    "Walk me through how you would architect a real-time notifications service."
+    "What trade-offs would you consider when choosing between a monolith and microservices?"
+    "How would you design a data pipeline that handles late-arriving events?"
+- AVOID trivial or foundational questions — the candidate must be challenged
 """.format(difficulty_target)
+
+    # Previous questions section (for diversity in multi-question sessions)
+    previous_section = ""
+    if previous_questions:
+        prev_list = "\n".join(f"  - {q}" for q in previous_questions)
+        previous_section = f"""
+PREVIOUS QUESTIONS ALREADY ASKED (DO NOT repeat these or ask about the same topic):
+{prev_list}
+
+You MUST ask about a DIFFERENT topic than all previous questions.
+"""
 
     prompt = f"""Generate ONE interview question with these parameters:
 
 ROLE: {role}
 EXPERIENCE LEVEL: {experience_level}
 
+ROLE ALIGNMENT:
+All questions, terminology, and examples MUST be directly relevant to the role of {role}.
+Prioritize topics that are central to day-to-day work in this role.
+
 {topic_section}
+
+{previous_section}
 
 {difficulty_guidance}
 
@@ -371,7 +400,8 @@ class QuestionGenerationAgent:
         role: str,
         experience_level: str,
         topic_constraints: Optional[List[str]] = None,
-        difficulty_target: float = 0.5
+        difficulty_target: float = 0.5,
+        previous_questions: Optional[List[str]] = None
     ) -> QuestionOutput:
         """
         Generate an interview question.
@@ -381,6 +411,7 @@ class QuestionGenerationAgent:
             experience_level: "Fresher", "Mid", or "Senior"
             topic_constraints: Optional list of allowed topics
             difficulty_target: Target difficulty 0.0-1.0 (default: 0.5)
+            previous_questions: List of previously asked question texts (for diversity)
 
         Returns:
             QuestionOutput with validated question
@@ -399,7 +430,8 @@ class QuestionGenerationAgent:
 
         logger.info(
             f"Generating question: role={role}, level={experience_level}, "
-            f"topics={topic_constraints}, difficulty={difficulty_target}"
+            f"topics={topic_constraints}, difficulty={difficulty_target}, "
+            f"previous_count={len(previous_questions) if previous_questions else 0}"
         )
 
         # Build prompt
@@ -407,7 +439,8 @@ class QuestionGenerationAgent:
             role=input_data.role,
             experience_level=input_data.experience_level,
             topic_constraints=input_data.topic_constraints,
-            difficulty_target=input_data.difficulty_target
+            difficulty_target=input_data.difficulty_target,
+            previous_questions=previous_questions
         )
 
         # Attempt generation with retry
@@ -513,7 +546,7 @@ class QuestionGenerationAgent:
 
         # Map experience to difficulty
         difficulty_map = {
-            "Fresher": 0.3,
+            "Junior": 0.3,
             "Mid": 0.6,
             "Senior": 0.8
         }
@@ -524,7 +557,7 @@ class QuestionGenerationAgent:
         topic = input_data.topic_constraints[0] if input_data.topic_constraints else "General"
 
         # Generate basic question
-        if input_data.experience_level == "Fresher":
+        if input_data.experience_level == "Junior":
             text = f"Explain the fundamental concepts of {topic} and provide a simple example from a project you've worked on."
         elif input_data.experience_level == "Mid":
             text = f"Describe a challenging problem you've solved involving {topic}. What approach did you take and why?"
@@ -569,10 +602,15 @@ def question_generation_node(state: "InterviewState") -> "InterviewState":
         # Initialize agent
         agent = QuestionGenerationAgent()
 
+        # Derive difficulty_target from experience level
+        _difficulty_map = {"Junior": 0.3, "Mid": 0.55, "Senior": 0.80}
+        difficulty_target = _difficulty_map.get(state.experience_level, 0.5)
+
         # Generate question
         result = agent.generate(
             role=state.role,
-            experience_level=state.experience_level
+            experience_level=state.experience_level,
+            difficulty_target=difficulty_target
         )
 
         # Create updated state copy
